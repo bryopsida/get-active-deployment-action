@@ -10,7 +10,7 @@ To include in your workflow add the following step
       - id: fetch-active-deployment
         uses: bryopsida/get-active-deployment-action@v1
         with:
-          owner: '<owner-of-the-reploy>'
+          owner: '<owner-of-the-replo>'
           repo: '<repo-that-owns-env>'
           environment: '<environment-name>'
           token: ${{ secrets.GITHUB_TOKEN }} || <your custom PAT>
