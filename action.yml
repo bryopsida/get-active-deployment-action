@@ -1,0 +1,57 @@
+name: 'Get Active Deployment For Environment'
+description: 'Fetches the currently active deployment info for a specified environment provides the associated json'
+inputs:
+  owner:
+    description: "owner of the repository"
+    required: true
+  repo:
+    description: "repo name"
+    required: true
+  environment:
+    description: "environment name"
+    required: true
+  token:
+    description: "github access token"
+    required: true
+outputs:
+  deployment:
+    description: "json string of active deployment on the specified environment"
+    value: ${{ steps.fetch-deployment.outputs.deployment }}
+runs:
+  using: 'composite'
+  steps:
+  - id: fetch-deployment
+    shell: bash
+    run: |
+      env="${{ inputs.environment }}"
+      state="success"
+      repo="${{ inputs.repo }}"
+      owner="${{ inputs.owner }}"
+      github_pat=${{ inputs.token }}
+
+      jsonArr="["
+      for status_url in $(curl -s -H "Authorization: token $github_pat" https://api.github.com/repos/$owner/$repo/deployments\?environment\=$env | jq '.[].statuses_url')
+      do
+          url=$(echo $status_url | sed 's/\"//g')
+          echo "fetching deployment information from $url"
+          status_info=$(curl -s -H "Authorization: token $github_pat" $url | jq '.[] | select(.state == "'$state'")')
+          if [ "$status_info" != "" ]; then
+              if [ "$jsonArr" == "[" ]; then
+                  jsonArr="$jsonArr $status_info"
+              else
+                  jsonArr="$jsonArr,$status_info"
+              fi
+          fi
+      done
+      jsonArr="$jsonArr]"
+      if [ "$jsonArr" == "[]" ]; then
+          echo "No deployment found"
+          exit 1
+      fi
+      sortedJsonArr=$(echo "$jsonArr" | jq 'sort_by(.updated_at) | reverse')
+      lastDeployStatus=$(echo "$sortedJsonArr" | jq 'first(.[])')
+      activeDeployUrl=$(echo $lastDeployStatus | jq '.deployment_url' | tr -d '"')
+      activeDeploy=$(curl -s -H "Authorization: token $github_pat" $activeDeployUrl)
+      echo "Deployment object"
+      echo $activeDeploy | jq '.'
+      echo "::set-output name=deployment::$(echo $activeDeploy)"

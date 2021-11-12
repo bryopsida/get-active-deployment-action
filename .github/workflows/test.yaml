@@ -1,0 +1,19 @@
+name: 'Test Action'
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test fetching last deployment
+    steps:
+      - id: fetch
+        uses: bryopsida/get-active-deployment-action@main
+        with:
+          owner: 'bryopsida'
+          repo: 'actions-playground'
+          environment: 'test'
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          echo '${{ steps.fetch.outputs.deployment }}' | jq '.'
+          echo '${{ steps.fetch.outputs.deployment }}' | jq '.sha'
+          echo '${{ steps.fetch.outputs.deployment }}' | jq '.ref'
+        shell: bash
